@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#181b20">
+  <meta name="description" content="Chess — scacchi per due giocatori sullo stesso dispositivo.">
+  <title>Chess — Scacchi in due</title>
+  <script>
+    (() => {
+      try {
+        const saved = JSON.parse(localStorage.getItem("chess.prefs") || "{}");
+        const preference = ["dark", "light", "system"].includes(saved.theme) ? saved.theme : "system";
+        const resolved = preference === "system"
+          ? (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
+          : preference;
+        const root = document.documentElement;
+        root.dataset.theme = resolved;
+        root.dataset.themeSetting = preference;
+        if (saved.lang === "en") root.lang = "en";
+        if (saved.coords === false) root.dataset.coords = "off";
+        if (saved.lastMove === false) root.dataset.lastMove = "off";
+        if (saved.motion === false) root.dataset.motion = "off";
+        const themeMeta = document.querySelector('meta[name="theme-color"]');
+        if (themeMeta) themeMeta.content = resolved === "light" ? "#f1f0eb" : "#181b20";
+      } catch (error) {}
+    })();
+  </script>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="fonts/instrument-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/instrument-serif-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Font Awesome Free 6.7.2 chess icons (CC BY 4.0), used as a flat SVG sprite. -->
+  <svg class="svg-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+      <g id="icon-p" transform="translate(136 40)"><path d="M215.5 224c29.2-18.4 48.5-50.9 48.5-88c0-57.4-46.6-104-104-104S56 78.6 56 136c0 37.1 19.4 69.6 48.5 88L96 224c-17.7 0-32 14.3-32 32c0 16.5 12.5 30 28.5 31.8L80 400l160 0L227.5 287.8c16-1.8 28.5-15.3 28.5-31.8c0-17.7-14.3-32-32-32l-8.5 0zM22.6 473.4c-4.2 4.2-6.6 10-6.6 16C16 501.9 26.1 512 38.6 512l242.7 0c12.5 0 22.6-10.1 22.6-22.6c0-6-2.4-11.8-6.6-16L256 432 64 432 22.6 473.4z"/></g>
+      <g id="icon-n" transform="translate(72 40)"><path d="M96 48L82.7 61.3C70.7 73.3 64 89.5 64 106.5l0 132.4c0 10.7 5.3 20.7 14.2 26.6l10.6 7c14.3 9.6 32.7 10.7 48.1 3l3.2-1.6c2.6-1.3 5-2.8 7.3-4.5l49.4-37c6.6-5 15.7-5 22.3 0c10.2 7.7 9.9 23.1-.7 30.3L90.4 350C73.9 361.3 64 380 64 400l320 0 28.9-159c2.1-11.3 3.1-22.8 3.1-34.3l0-14.7C416 86 330 0 224 0L83.8 0C72.9 0 64 8.9 64 19.8c0 7.5 4.2 14.3 10.9 17.7L96 48zm24 68a20 20 0 1 1 40 0 20 20 0 1 1 -40 0zM22.6 473.4c-4.2 4.2-6.6 10-6.6 16C16 501.9 26.1 512 38.6 512l370.7 0c12.5 0 22.6-10.1 22.6-22.6c0-6-2.4-11.8-6.6-16L384 432 64 432 22.6 473.4z"/></g>
+      <g id="icon-b" transform="translate(136 40)"><path d="M128 0C110.3 0 96 14.3 96 32c0 16.1 11.9 29.4 27.4 31.7C78.4 106.8 8 190 8 288c0 47.4 30.8 72.3 56 84.7L64 400l192 0 0-27.3c25.2-12.5 56-37.4 56-84.7c0-37.3-10.2-72.4-25.3-104.1l-99.4 99.4c-6.2 6.2-16.4 6.2-22.6 0s-6.2-16.4 0-22.6L270.8 154.6c-23.2-38.1-51.8-69.5-74.2-90.9C212.1 61.4 224 48.1 224 32c0-17.7-14.3-32-32-32L128 0zM48 432L6.6 473.4c-4.2 4.2-6.6 10-6.6 16C0 501.9 10.1 512 22.6 512l274.7 0c12.5 0 22.6-10.1 22.6-22.6c0-6-2.4-11.8-6.6-16L272 432 48 432z"/></g>
+      <g id="icon-r" transform="translate(72 40)"><path d="M32 192L32 48c0-8.8 7.2-16 16-16l64 0c8.8 0 16 7.2 16 16l0 40c0 4.4 3.6 8 8 8l32 0c4.4 0 8-3.6 8-8l0-40c0-8.8 7.2-16 16-16l64 0c8.8 0 16 7.2 16 16l0 40c0 4.4 3.6 8 8 8l32 0c4.4 0 8-3.6 8-8l0-40c0-8.8 7.2-16 16-16l64 0c8.8 0 16 7.2 16 16l0 144c0 10.1-4.7 19.6-12.8 25.6L352 256l16 144L80 400 96 256 44.8 217.6C36.7 211.6 32 202.1 32 192zm176 96l32 0c8.8 0 16-7.2 16-16l0-48c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 48c0 8.8 7.2 16 16 16zM22.6 473.4L64 432l320 0 41.4 41.4c4.2 4.2 6.6 10 6.6 16c0 12.5-10.1 22.6-22.6 22.6L38.6 512C26.1 512 16 501.9 16 489.4c0-6 2.4-11.8 6.6-16z"/></g>
+      <g id="icon-q" transform="translate(40 40)"><path d="M256 0a56 56 0 1 1 0 112A56 56 0 1 1 256 0zM134.1 143.8c3.3-13 15-23.8 30.2-23.8c12.3 0 22.6 7.2 27.7 17c12 23.2 36.2 39 64 39s52-15.8 64-39c5.1-9.8 15.4-17 27.7-17c15.3 0 27 10.8 30.2 23.8c7 27.8 32.2 48.3 62.1 48.3c10.8 0 21-2.7 29.8-7.4c8.4-4.4 18.9-4.5 27.6 .9c13 8 17.1 25 9.2 38L399.7 400 384 400l-40.4 0-175.1 0L128 400l-15.7 0L5.4 223.6c-7.9-13-3.8-30 9.2-38c8.7-5.3 19.2-5.3 27.6-.9c8.9 4.7 19 7.4 29.8 7.4c29.9 0 55.1-20.5 62.1-48.3zM256 224s0 0 0 0s0 0 0 0s0 0 0 0zM112 432l288 0 41.4 41.4c4.2 4.2 6.6 10 6.6 16c0 12.5-10.1 22.6-22.6 22.6L86.6 512C74.1 512 64 501.9 64 489.4c0-6 2.4-11.8 6.6-16L112 432z"/></g>
+      <g id="icon-k" transform="translate(72 40)"><path d="M224 0c17.7 0 32 14.3 32 32l0 16 16 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-16 0 0 48 152 0c22.1 0 40 17.9 40 40c0 5.3-1 10.5-3.1 15.4L368 400 80 400 3.1 215.4C1 210.5 0 205.3 0 200c0-22.1 17.9-40 40-40l152 0 0-48-16 0c-17.7 0-32-14.3-32-32s14.3-32 32-32l16 0 0-16c0-17.7 14.3-32 32-32zM38.6 473.4L80 432l288 0 41.4 41.4c4.2 4.2 6.6 10 6.6 16c0 12.5-10.1 22.6-22.6 22.6L54.6 512C42.1 512 32 501.9 32 489.4c0-6 2.4-11.8 6.6-16z"/></g>
+    </defs>
+  </svg>
+
+  <div class="app">
+    <header class="topbar">
+      <h1 class="sr-only" data-i18n="app.heading">Chess — scacchi per due giocatori in locale</h1>
+      <div class="brand" aria-hidden="true">
+        <span class="brand__word">chess<span class="brand__dot">.</span></span>
+        <span class="brand__meta" data-i18n="brand.meta">Due giocatori</span>
+      </div>
+
+      <div class="status" id="status">
+        <span class="status__dot" aria-hidden="true"></span>
+        <span class="status__text" id="status-text">Tocca al Bianco</span>
+      </div>
+
+      <div class="topbar__actions">
+        <details class="more" id="more">
+          <summary aria-label="Altre azioni" title="Altre azioni" data-i18n-aria-label="actions.more" data-i18n-title="actions.more">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="4" cy="10" r="1.5"/><circle cx="10" cy="10" r="1.5"/><circle cx="16" cy="10" r="1.5"/></svg>
+          </summary>
+          <div class="menu">
+            <button type="button" data-menu="draw" data-i18n="menu.draw">Patta d’accordo</button>
+            <button type="button" data-menu="resign" class="menu__danger" data-i18n="menu.resign">Abbandona</button>
+            <div class="menu__sep" role="separator"></div>
+            <button type="button" data-menu="settings" data-i18n="menu.settings">Impostazioni</button>
+          </div>
+        </details>
+        <button type="button" class="btn btn--ghost btn--icon" id="settings-open" aria-label="Impostazioni" title="Impostazioni" data-i18n-aria-label="actions.settings" data-i18n-title="actions.settings">
+          <svg class="btn__icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 6h7M14.5 6H17M3 14h2.5M10 14h7"/><circle cx="12" cy="6" r="2.3"/><circle cx="7.5" cy="14" r="2.3"/></svg>
+        </button>
+        <button type="button" class="btn btn--ghost" id="new-game" aria-label="Nuova partita" data-i18n-aria-label="actions.newGame">
+          <svg class="btn__icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M16.1 8.8a6.3 6.3 0 1 0-.4 3.5"/><path d="M16.4 3.5v5.2h-5.2"/></svg>
+          <span class="btn__label" data-i18n="actions.newGame">Nuova partita</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="table">
+      <section class="player player--black" id="black-player" aria-label="Giocatore Nero" data-i18n-aria-label="player.blackAria">
+        <div class="player__who">
+          <span class="player__king" aria-hidden="true">
+            <svg class="piece-svg piece-svg--b" viewBox="0 0 592 592" aria-hidden="true" focusable="false"><use href="#icon-k"></use></svg>
+          </span>
+          <div class="player__id">
+            <span class="player__name" data-i18n="player.black">Nero</span>
+            <span class="player__state" id="black-state" data-i18n="states.waiting">In attesa</span>
+          </div>
+        </div>
+        <div class="player__taken">
+          <span class="player__label" aria-hidden="true" data-i18n="player.captures">Catture</span>
+          <div class="taken" id="black-taken" role="img" aria-label="Nessuna cattura" data-i18n-aria-label="player.noCaptures"></div>
+        </div>
+        <div class="player__score">
+          <span class="player__points" id="black-score">0</span>
+          <span class="player__unit" data-i18n="player.points">pt</span>
+          <span class="player__edge" id="black-edge" hidden></span>
+        </div>
+      </section>
+
+      <div class="board-shell">
+        <div class="board" id="board" role="group" aria-label="Scacchiera. Tocca al Bianco."></div>
+      </div>
+
+      <section class="player player--white" id="white-player" aria-label="Giocatore Bianco" data-i18n-aria-label="player.whiteAria">
+        <div class="player__who">
+          <span class="player__king" aria-hidden="true">
+            <svg class="piece-svg piece-svg--w" viewBox="0 0 592 592" aria-hidden="true" focusable="false"><use href="#icon-k"></use></svg>
+          </span>
+          <div class="player__id">
+            <span class="player__name" data-i18n="player.white">Bianco</span>
+            <span class="player__state" id="white-state" data-i18n="states.turn">Al tratto</span>
+          </div>
+        </div>
+        <div class="player__taken">
+          <span class="player__label" aria-hidden="true" data-i18n="player.captures">Catture</span>
+          <div class="taken" id="white-taken" role="img" aria-label="Nessuna cattura" data-i18n-aria-label="player.noCaptures"></div>
+        </div>
+        <div class="player__score">
+          <span class="player__points" id="white-score">0</span>
+          <span class="player__unit" data-i18n="player.points">pt</span>
+          <span class="player__edge" id="white-edge" hidden></span>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p class="values">
+        <span class="values__label" data-i18n="values.label">Valori</span>
+        <span><span data-i18n="piece.pawn">Pedone</span> <b>1</b></span>
+        <span><span data-i18n="piece.knight">Cavallo</span> <b>3</b></span>
+        <span><span data-i18n="piece.bishop">Alfiere</span> <b>3</b></span>
+        <span><span data-i18n="piece.rook">Torre</span> <b>5</b></span>
+        <span><span data-i18n="piece.queen">Regina</span> <b>9</b></span>
+      </p>
+      <p class="first" data-i18n="firstMove">Il Bianco muove per primo</p>
+    </footer>
+  </div>
+
+  <dialog class="dialog promotion" id="promotion-dialog" aria-labelledby="promotion-title" aria-describedby="promotion-sub">
+    <p class="eyebrow" data-i18n="promotion.eyebrow">Promozione</p>
+    <h2 class="dialog__title" id="promotion-title" data-i18n="promotion.title">Scegli il nuovo pezzo</h2>
+    <p class="dialog__sub" id="promotion-sub" data-i18n="promotion.detail">Il pedone ha raggiunto l’ultima traversa.</p>
+    <div class="promotion__options" id="promotion-options"></div>
+    <button type="button" class="btn btn--quiet promotion__cancel" id="promotion-cancel" data-i18n="promotion.cancel">Annulla</button>
+  </dialog>
+
+  <dialog class="dialog confirm" id="confirm-dialog" aria-labelledby="confirm-title" aria-describedby="confirm-sub">
+    <p class="eyebrow" id="confirm-eyebrow" data-i18n="confirm.eyebrow">Conferma</p>
+    <h2 class="dialog__title" id="confirm-title">Ricominciare?</h2>
+    <p class="dialog__sub" id="confirm-sub"></p>
+    <div class="dialog__actions">
+      <button type="button" class="btn btn--ghost" id="confirm-cancel" data-i18n="confirm.cancel">Annulla</button>
+      <button type="button" class="btn btn--primary" id="confirm-ok" data-i18n="confirm.ok">Conferma</button>
+    </div>
+  </dialog>
+
+  <dialog class="dialog settings" id="settings-dialog" aria-labelledby="settings-title" aria-describedby="settings-sub">
+    <p class="eyebrow" data-i18n="settings.eyebrow">Preferenze</p>
+    <h2 class="dialog__title" id="settings-title" data-i18n="settings.title">Impostazioni</h2>
+    <p class="dialog__sub" id="settings-sub" data-i18n="settings.sub">Aspetto e comportamento della partita.</p>
+
+    <div class="settings__body">
+      <fieldset class="settings__group">
+        <legend class="settings__legend" data-i18n="settings.theme">Tema</legend>
+        <div class="segmented">
+          <label class="segment">
+            <input class="segment__input" type="radio" name="theme" value="dark">
+            <span class="segment__label" data-i18n="settings.themeDark">Scuro</span>
+          </label>
+          <label class="segment">
+            <input class="segment__input" type="radio" name="theme" value="light">
+            <span class="segment__label" data-i18n="settings.themeLight">Chiaro</span>
+          </label>
+          <label class="segment">
+            <input class="segment__input" type="radio" name="theme" value="system" checked>
+            <span class="segment__label" data-i18n="settings.themeSystem">Sistema</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="settings__group">
+        <legend class="settings__legend" data-i18n="settings.language">Lingua</legend>
+        <div class="segmented">
+          <label class="segment">
+            <input class="segment__input" type="radio" name="language" value="it" checked>
+            <span class="segment__label" lang="it">Italiano</span>
+          </label>
+          <label class="segment">
+            <input class="segment__input" type="radio" name="language" value="en">
+            <span class="segment__label" lang="en">English</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="settings__group">
+        <legend class="settings__legend" data-i18n="settings.game">Gioco</legend>
+        <div class="settings__options">
+          <label class="setting">
+            <span class="setting__copy">
+              <span class="setting__name" data-i18n="settings.coords">Coordinate</span>
+              <span class="setting__desc" id="setting-coords-desc" data-i18n="settings.coordsDesc">Mostra lettere e numeri lungo i bordi.</span>
+            </span>
+            <input class="setting__input" id="setting-coords" type="checkbox" data-setting="coords" aria-describedby="setting-coords-desc" data-i18n-aria-label="settings.coords">
+            <span class="switch" aria-hidden="true"></span>
+          </label>
+          <label class="setting">
+            <span class="setting__copy">
+              <span class="setting__name" data-i18n="settings.lastMove">Evidenzia l’ultima mossa</span>
+              <span class="setting__desc" id="setting-last-move-desc" data-i18n="settings.lastMoveDesc">Tieni visibili partenza e arrivo dell’ultima mossa.</span>
+            </span>
+            <input class="setting__input" id="setting-last-move" type="checkbox" data-setting="lastMove" aria-describedby="setting-last-move-desc" data-i18n-aria-label="settings.lastMove">
+            <span class="switch" aria-hidden="true"></span>
+          </label>
+          <label class="setting">
+            <span class="setting__copy">
+              <span class="setting__name" data-i18n="settings.motion">Animazioni</span>
+              <span class="setting__desc" id="setting-motion-desc" data-i18n="settings.motionDesc">Animazioni e transizioni dell’interfaccia.</span>
+            </span>
+            <input class="setting__input" id="setting-motion" type="checkbox" data-setting="motion" aria-describedby="setting-motion-desc" data-i18n-aria-label="settings.motion">
+            <span class="switch" aria-hidden="true"></span>
+          </label>
+          <label class="setting">
+            <span class="setting__copy">
+              <span class="setting__name" data-i18n="settings.confirmNew">Chiedi conferma per una nuova partita</span>
+              <span class="setting__desc" id="setting-confirm-desc" data-i18n="settings.confirmNewDesc">Evita di azzerare la partita per errore.</span>
+            </span>
+            <input class="setting__input" id="setting-confirm" type="checkbox" data-setting="confirmNew" aria-describedby="setting-confirm-desc" data-i18n-aria-label="settings.confirmNew">
+            <span class="switch" aria-hidden="true"></span>
+          </label>
+        </div>
+      </fieldset>
+
+      <button type="button" class="about-link" id="settings-about" aria-haspopup="dialog">
+        <span class="about-link__copy">
+          <span class="about-link__name" data-i18n="settings.about">Informazioni e crediti</span>
+          <span class="about-link__desc" data-i18n="settings.aboutDesc">Licenze, font e note sul gioco.</span>
+        </span>
+        <svg class="about-link__icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10h11M11 5.5l4.5 4.5-4.5 4.5"/></svg>
+      </button>
+    </div>
+
+    <div class="settings__actions">
+      <button type="button" class="btn btn--quiet settings__reset" id="settings-reset" data-i18n="settings.reset">Ripristina predefiniti</button>
+      <button type="button" class="btn btn--primary" id="settings-close" data-i18n="settings.close">Chiudi</button>
+    </div>
+  </dialog>
+
+  <dialog class="dialog about" id="about-dialog" aria-labelledby="about-title" aria-describedby="about-sub">
+    <p class="eyebrow" data-i18n="about.eyebrow">Informazioni</p>
+    <h2 class="dialog__title" id="about-title" data-i18n="about.title">Informazioni e crediti</h2>
+    <p class="dialog__sub" id="about-sub" data-i18n="about.sub">Chess è un gioco di scacchi locale per due giocatori. Nessun account, nessun dato raccolto.</p>
+
+    <dl class="credits">
+      <div class="credit">
+        <dt data-i18n="about.license">Licenza del progetto</dt>
+        <dd>GNU GPL v3.0 · <a href="LICENSE" data-i18n="about.licenseLink">Licenza GPL</a></dd>
+      </div>
+      <div class="credit">
+        <dt data-i18n="about.rules">Motore delle regole</dt>
+        <dd>chess.js 1.4.0 · BSD-2-Clause · <a href="vendor/chess.LICENSE.txt" data-i18n="about.chessLicense">Licenza chess.js</a></dd>
+      </div>
+      <div class="credit">
+        <dt data-i18n="about.icons">Icone dei pezzi</dt>
+        <dd>Font Awesome Free 6.7.2 · CC BY 4.0 · <a href="licenses/FontAwesome-Free-License.txt" data-i18n="about.iconsLicense">Licenza Font Awesome</a></dd>
+      </div>
+      <div class="credit">
+        <dt data-i18n="about.fonts">Font e icona</dt>
+        <dd>Instrument Sans / Instrument Serif · SIL OFL 1.1 · <a href="licenses/OFL-InstrumentSans.txt" data-i18n="about.fontsLicense">Licenza font</a><br>
+          Material Symbols Rounded (Google) · Apache-2.0 · <a href="licenses/Apache-2.0-MaterialSymbols.txt" data-i18n="about.apacheLicense">Licenza Apache</a></dd>
+      </div>
+    </dl>
+
+    <p class="about__note" data-i18n="about.local">Niente cookie, analytics o tracciamento: la partita e le preferenze restano sul dispositivo.</p>
+    <div class="dialog__actions">
+      <button type="button" class="btn btn--primary" id="about-close" data-i18n="about.close">Chiudi</button>
+    </div>
+  </dialog>
+
+  <dialog class="dialog result" id="result-dialog" aria-labelledby="result-title" aria-describedby="result-sub">
+    <button type="button" class="result__close" id="result-close" aria-label="Chiudi e guarda la scacchiera" data-i18n-aria-label="result.close">×</button>
+    <p class="eyebrow" id="result-eyebrow" data-i18n="result.eyebrow">Partita conclusa</p>
+    <h2 class="result__title" id="result-title" data-i18n="checkmate.title">Scacco matto</h2>
+    <p class="dialog__sub" id="result-sub"></p>
+    <div class="result__scores">
+      <div class="result__score">
+        <span class="result__color" aria-hidden="true"><span class="mini-king"><svg class="piece-svg piece-svg--w" viewBox="0 0 592 592"><use href="#icon-k"></use></svg></span></span>
+        <span class="result__name" data-i18n="player.white">Bianco</span>
+        <strong id="result-white-score">0</strong>
+      </div>
+      <div class="result__divider" aria-hidden="true"></div>
+      <div class="result__score">
+        <span class="result__color" aria-hidden="true"><span class="mini-king"><svg class="piece-svg piece-svg--b" viewBox="0 0 592 592"><use href="#icon-k"></use></svg></span></span>
+        <span class="result__name" data-i18n="player.black">Nero</span>
+        <strong id="result-black-score">0</strong>
+      </div>
+    </div>
+    <p class="result__legend" data-i18n="result.legend">Punti materiale catturato</p>
+    <div class="dialog__actions">
+      <button type="button" class="btn btn--ghost" id="result-board" data-i18n="result.board">Guarda la scacchiera</button>
+      <button type="button" class="btn btn--primary" id="result-new" data-i18n="result.new">Nuova partita</button>
+    </div>
+  </dialog>
+
+  <p class="sr-only" id="live" aria-live="polite"></p>
+
+  <script src="vendor/chess.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
