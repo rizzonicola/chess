@@ -8,14 +8,14 @@
   const STORAGE_KEY = "chess.prefs";
   const DEFAULT_PREFS = Object.freeze({
     theme: "system",
-    lang: "it",
+    lang: "system",
     coords: true,
     lastMove: true,
     motion: true,
     confirmNew: true
   });
   const THEME_VALUES = ["dark", "light", "system"];
-  const LANGUAGE_VALUES = ["it", "en"];
+  const LANGUAGE_VALUES = ["it", "en", "system"];
   const OPTION_KEYS = ["coords", "lastMove", "motion", "confirmNew"];
 
   const TRANSLATIONS = {
@@ -117,6 +117,7 @@
       "square.selected": ", selezionato",
       "square.legal": ", mossa legale",
       "square.legalCapture": ", mossa legale con cattura",
+      "square.castle": ", torre per l'arrocco",
       "square.kingCheck": ", re sotto scacco",
       "square.gameOver": ", partita conclusa",
       "a11y.selectedOne": "{piece} in {square} selezionato. 1 mossa legale.",
@@ -148,6 +149,7 @@
       "settings.themeLight": "Chiaro",
       "settings.themeSystem": "Sistema",
       "settings.language": "Lingua",
+      "settings.langSystem": "Sistema",
       "settings.game": "Gioco",
       "settings.coords": "Coordinate",
       "settings.coordsDesc": "Mostra lettere e numeri lungo i bordi.",
@@ -162,6 +164,7 @@
       "settings.about": "Informazioni e crediti",
       "settings.aboutDesc": "Licenze, font e note sul gioco.",
       "settings.langChanged": "Lingua italiana attivata.",
+      "settings.langSystemChanged": "Lingua di sistema attivata.",
       "settings.resetDone": "Impostazioni predefinite ripristinate.",
       "about.eyebrow": "Informazioni",
       "about.title": "Informazioni e crediti",
@@ -276,6 +279,7 @@
       "square.selected": ", selected",
       "square.legal": ", legal move",
       "square.legalCapture": ", legal capture",
+      "square.castle": ", castling rook",
       "square.kingCheck": ", king in check",
       "square.gameOver": ", game over",
       "a11y.selectedOne": "{piece} on {square} selected. 1 legal move.",
@@ -307,6 +311,7 @@
       "settings.themeLight": "Light",
       "settings.themeSystem": "System",
       "settings.language": "Language",
+      "settings.langSystem": "System",
       "settings.game": "Game",
       "settings.coords": "Coordinates",
       "settings.coordsDesc": "Show letters and numbers along the edges.",
@@ -321,6 +326,7 @@
       "settings.about": "About and credits",
       "settings.aboutDesc": "Licences, fonts and notes about the game.",
       "settings.langChanged": "English language enabled.",
+      "settings.langSystemChanged": "System language enabled.",
       "settings.resetDone": "Default settings restored.",
       "about.eyebrow": "About",
       "about.title": "About and credits",
@@ -442,7 +448,7 @@
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   let prefs = loadPreferences();
-  let currentLang = prefs.lang;
+  let currentLang = resolveLanguage();
 
   let game = new Chess();
   let selected = null;
@@ -497,6 +503,21 @@
   function resolvedTheme() {
     if (prefs.theme === "system") return systemLight.matches ? "light" : "dark";
     return prefs.theme;
+  }
+
+  function resolveLanguage(setting = prefs.lang) {
+    if (setting === "it" || setting === "en") return setting;
+
+    const preferred = Array.isArray(navigator.languages) && navigator.languages.length
+      ? navigator.languages
+      : [navigator.language || ""];
+
+    for (const language of preferred) {
+      const base = String(language).toLowerCase().split("-")[0];
+      if (base === "it" || base === "en") return base;
+    }
+
+    return "en";
   }
 
   function applyTheme() {
@@ -703,12 +724,36 @@
     return selected ? legalMoves.find((move) => move.to === square) : null;
   }
 
+  function castlingRookSquares() {
+    const squares = new Set();
+    if (!selected) return squares;
+
+    const king = game.get(selected);
+    if (!king || king.type !== "k" || king.color !== game.turn()) return squares;
+
+    const rank = selected[1];
+    for (const move of legalMoves) {
+      if (move.piece !== "k") continue;
+      if (move.flags.includes("k")) squares.add(`h${rank}`);
+      if (move.flags.includes("q")) squares.add(`a${rank}`);
+    }
+
+    return squares;
+  }
+
+  function castlingMoveForRook(square) {
+    if (!castlingRookSquares().has(square)) return null;
+    const side = square[0] === "h" ? "k" : "q";
+    return legalMoves.find((move) => move.piece === "k" && move.flags.includes(side)) || null;
+  }
+
   function renderBoard() {
     const turn = game.turn();
     const checked = result ? result.kind === "checkmate" : game.isCheck();
     const kingSquare = checked ? findKing(turn) : null;
     const lastSquares = lastMoveSquares();
     const arrivals = arrivalSquares();
+    const castleRooks = castlingRookSquares();
 
     for (const [square, button] of boardButtons) {
       const piece = game.get(square);
@@ -725,6 +770,7 @@
       button.classList.toggle("is-last", lastSquares.has(square));
       button.classList.toggle("is-arrived", arrivals.has(square));
       button.classList.toggle("is-check", square === kingSquare);
+      button.classList.toggle("is-castle", castleRooks.has(square));
       button.tabIndex = square === focusSquare ? 0 : -1;
 
       let label;
@@ -736,6 +782,7 @@
 
       if (isSelected) label += t("square.selected");
       if (target) label += isCapture ? t("square.legalCapture") : t("square.legal");
+      if (castleRooks.has(square)) label += t("square.castle");
       if (square === kingSquare) label += t("square.kingCheck");
       if (result) label += t("square.gameOver");
 
@@ -1030,6 +1077,12 @@
 
     if (selected && tryMoveTo(square)) return;
 
+    const castle = castlingMoveForRook(square);
+    if (castle) {
+      commitMove(castle);
+      return;
+    }
+
     const piece = game.get(square);
     if (piece && piece.color === game.turn()) {
       selectSquare(square);
@@ -1307,7 +1360,7 @@
 
   function applyLanguage(language) {
     prefs.lang = language;
-    currentLang = language;
+    currentLang = resolveLanguage(language);
     savePreferences();
     refreshResultCopy();
     applyStaticTranslations();
@@ -1318,7 +1371,7 @@
   function changeLanguage(language) {
     if (!LANGUAGE_VALUES.includes(language)) return;
     applyLanguage(language);
-    announce(t("settings.langChanged"));
+    announce(t(language === "system" ? "settings.langSystemChanged" : "settings.langChanged"));
   }
 
   function changeTheme(theme) {
@@ -1339,7 +1392,7 @@
 
   function resetPreferences() {
     prefs = { ...DEFAULT_PREFS };
-    currentLang = prefs.lang;
+    currentLang = resolveLanguage();
     savePreferences();
     refreshResultCopy();
     applyTheme();

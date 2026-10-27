@@ -18,7 +18,15 @@
         const root = document.documentElement;
         root.dataset.theme = resolved;
         root.dataset.themeSetting = preference;
-        if (saved.lang === "en") root.lang = "en";
+        const setting = ["it", "en", "system"].includes(saved.lang) ? saved.lang : "system";
+        const preferred = Array.isArray(navigator.languages) && navigator.languages.length
+          ? navigator.languages
+          : [navigator.language || ""];
+        const detected = preferred
+          .map((code) => String(code).toLowerCase().split("-")[0])
+          .find((code) => code === "it" || code === "en");
+        const language = setting === "system" ? (detected || "en") : setting;
+        if (language === "en") root.lang = "en";
         if (saved.coords === false) root.dataset.coords = "off";
         if (saved.lastMove === false) root.dataset.lastMove = "off";
         if (saved.motion === false) root.dataset.motion = "off";
@@ -187,12 +195,16 @@
         <legend class="settings__legend" data-i18n="settings.language">Lingua</legend>
         <div class="segmented">
           <label class="segment">
-            <input class="segment__input" type="radio" name="language" value="it" checked>
+            <input class="segment__input" type="radio" name="language" value="it">
             <span class="segment__label" lang="it">Italiano</span>
           </label>
           <label class="segment">
             <input class="segment__input" type="radio" name="language" value="en">
             <span class="segment__label" lang="en">English</span>
+          </label>
+          <label class="segment">
+            <input class="segment__input" type="radio" name="language" value="system" checked>
+            <span class="segment__label" data-i18n="settings.langSystem">Sistema</span>
           </label>
         </div>
       </fieldset>

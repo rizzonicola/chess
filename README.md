@@ -10,7 +10,7 @@
   <img src="docs/screenshot.png" alt="Chess in dark theme after a few opening moves" width="720">
 </p>
 
-Chess is a local two-player chess game with an Italian-first interface and an English option. It is designed for tablets and desktops, with the board oriented with White at the bottom.
+Chess is a local two-player chess game available in Italian and English. By default the interface follows the browser language, with English as the fallback. It is designed for tablets and desktops, with the board oriented with White at the bottom.
 
 There are no dependencies to install and no build step: open `index.html` in your browser.
 
@@ -27,6 +27,7 @@ Then visit `http://localhost:8000`.
 ## How to play
 
 - Tap or click a square, then the destination square. Legal moves are highlighted and captures have a dedicated border. If a piece has no legal moves, the status bar shows "No moves".
+- To castle, select the king and move it two squares toward a rook (`e1` → `g1`/`c1` for White, `e8` → `g8`/`c8` for Black), or select the king and click the highlighted home rook. The rook is highlighted only when castling is legal.
 - A piece can be stuck even if it looks free on the board: moving it would leave its own king in check (a pinned piece). When the king is in check, only moves that resolve the check are legal.
 - Keyboard: arrow keys move across the board, `Home`/`End` go to the first/last square, `Enter` selects and moves, `Esc` cancels the selection or closes a dialog.
 - The settings, about, promotion, confirmation, and result dialogs can also be dismissed by tapping or clicking the empty backdrop.
@@ -40,13 +41,13 @@ The game handles check, checkmate, stalemate, castling, en passant, promotion, t
 The gear in the top bar, or "Settings" in the `⋯` menu, opens the preferences:
 
 - **Theme**: Dark, Light, or System. System is the default and follows the device setting.
-- **Language**: Italian or English. Italian is the default.
+- **Language**: System, Italian, or English. System is the default and follows the browser language; if neither Italian nor English is preferred, the interface falls back to English.
 - **Coordinates**: show or hide files and ranks along the edges.
 - **Highlight last move**: keeps the start and destination of the last move visible.
 - **Animations**: enables or disables animations and transitions.
 - **Confirm before a new game**: prevents accidentally resetting the game.
 
-Preferences are saved in `localStorage` (key `chess.prefs`) and restored on reload. "Reset to defaults" returns to the system theme, Italian, and all options enabled. On narrower screens the gear is hidden, but settings remain available from the `⋯` menu.
+Preferences are saved in `localStorage` (key `chess.prefs`) and restored on reload. "Reset to defaults" returns to the system theme, system language, and all options enabled. On narrower screens the gear is hidden, but settings remain available from the `⋯` menu.
 
 At the bottom of settings, "About and credits" opens a panel with a game description, rules engine, piece icons, fonts, site icon, project licence, and links to the bundled licence files.
 
